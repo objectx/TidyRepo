@@ -1,24 +1,18 @@
-Groovy Application project template
-------------------------------------
+# TidyRepo: Tidy-up the repository
 
-You have just created a basic Groovy application. There is a standard project
-structure for source code and tests.
+-----------------
 
-In this project you get:
+## Usage
 
-* A Gradle build file
-* A standard project structure:
+`TidyRepo [options] <repository>`
 
-    <proj>
-      |
-      +- src
-          |
-          +- main
-          |     |
-          |     +- groovy
-          |
-          +- test
-          |   |
-          |   +- groovy
-
-          |
+ * -H | --help
+   * Print help
+ * -v | --verbose
+   * Be verbose
+ * -N | --dry-run
+   * Don't modify anything
+ * --tidy
+   * Perform clean-up action
+ * --tabstop=<num>
+   * Set tabstop to <num>
