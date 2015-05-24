@@ -15,7 +15,7 @@ class SourceTextValidatorTest extends Specification {
             def b = s.getBytes 'UTF-8'
             def bb = ByteBuffer.wrap (b).slice ()
             bb.position b.size ()
-            validator.validateToPosition bb.asReadOnlyBuffer ()
+            validator.validateToPosition bb.asReadOnlyBuffer (), 0
         }
     expect:
         helper (a) == b
@@ -28,5 +28,14 @@ class SourceTextValidatorTest extends Specification {
         " TEST" | true
         " \tTEST" | false
         "\tTEST" | false
+    }
+
+    def "Test multiline validator" () {
+    given:
+        def validator = new SourceTextValidator ()
+        def helper = { final String s->
+            def b = s.getBytes 'UTF-8'
+            def bb = ByteBuffer.wrap (b).asReadOnlyBuffer ()
+        }
     }
 }
