@@ -14,8 +14,8 @@ class SourceTextValidatorTest extends Specification {
         def helper = { final String s ->
             def b = s.getBytes 'UTF-8'
             def bb = ByteBuffer.wrap (b).slice ()
-            bb.position (b.size ())
-            validator.validateToPosition (bb.asReadOnlyBuffer ())
+            bb.position b.size ()
+            validator.validateToPosition bb.asReadOnlyBuffer ()
         }
     expect:
         helper (a) == b
