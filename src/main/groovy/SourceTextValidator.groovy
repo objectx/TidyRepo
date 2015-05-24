@@ -42,5 +42,24 @@ class SourceTextValidator {
         }
         true
     }
+
+    final boolean validate (final ByteBuffer input) {
+        ByteBuffer buf = input.asReadOnlyBuffer ()
+        int pos = buf.position ()
+        while (buf.position () < buf.limit ()) {
+            int ch = buf.get ()
+            if (ch == 0x0A) {
+                // Line formed
+                if (! validateToPosition (buf, pos)) {
+                    return false
+                }
+                pos = buf.position ()
+            }
+        }
+        if (pos < buf.limit ()) {
+            return validateToPosition (buf, pos)
+        }
+        true
+    }
 }
 

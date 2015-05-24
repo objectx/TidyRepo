@@ -30,12 +30,28 @@ class SourceTextValidatorTest extends Specification {
         "\tTEST" | false
     }
 
+    @Unroll ('helper (#a) == #b ?')
     def "Test multiline validator" () {
     given:
         def validator = new SourceTextValidator ()
         def helper = { final String s->
             def b = s.getBytes 'UTF-8'
-            def bb = ByteBuffer.wrap (b).asReadOnlyBuffer ()
+            validator.validate (ByteBuffer.wrap (b))
         }
+    expect:
+        helper (a) == b
+    where:
+        a << ['''abc
+def
+ghi
+'''
+        ,     '''abc\r
+def\r
+ghi\r
+'''
+        ,     '''abc
+\tdef'''
+        ]
+        b << [true, false, false]
     }
 }
