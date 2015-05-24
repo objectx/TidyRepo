@@ -56,7 +56,7 @@ def eachRepositoryFiles (Path repo, Closure<Path> closure) {
         throw new IOException ("${repo} is neither git nor mercurial repository.")
     }
 
-    files.in.eachLine { l ->
+    files.in.eachLine { String l ->
         Path target = repo.resolve l
         closure.delegate = target
         closure target
