@@ -8,7 +8,7 @@ import java.nio.ByteBuffer
  */
 class SourceTextValidatorTest extends Specification {
     @Unroll ("helper (#a) == #b ?")
-    def "Check: SouceTextValidator.valudate" () {
+    def "Test single line validator" () {
     given:
         def validator = new SourceTextValidator ()
         def helper = { final String s ->
