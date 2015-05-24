@@ -1,11 +1,14 @@
 import ch.qos.logback.classic.Level
+import groovy.transform.CompileStatic
 import groovy.transform.Field
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-/**
- * Created by objectx on 2015/05/23.
- */
+import java.nio.file.Path
+import java.nio.file.Paths
+
+import static java.nio.file.Files.exists
+
 
 def build_option_parser () {
     def scriptname = (new File (getClass().protectionDomain.codeSource.location.file)).name
@@ -36,3 +39,37 @@ if (options.'help') {
 if (options.'verbose') {
     rootLogger.level = Level.INFO
 }
+
+@CompileStatic
+def eachRepositoryFiles (Path repo, Closure<Path> closure) {
+    Process files
+
+    if (exists (repo.resolve ('.hg'))) {
+        // log.info ".hg/ found"
+        files = ["hg", "files"].execute ([], repo.toFile ())
+    }
+    else if (exists (repo.resolve ('.git'))) {
+        // log.info ".git/ found"
+        files = ["git", "ls-files"].execute ([], repo.toFile ())
+    }
+    else {
+        throw new IOException ("${repo} is neither git nor mercurial repository.")
+    }
+
+    files.in.eachLine { l ->
+        Path target = repo.resolve l
+        closure.delegate = target
+        closure target
+    }
+}
+
+@CompileStatic
+def eachRepositoryFiles (String path, Closure<Path> closure) {
+    eachRepositoryFiles (Paths.get (path), closure)
+}
+
+eachRepositoryFiles ('.') { Path p ->
+    println p.fileName
+}
+
+System.exit 0
