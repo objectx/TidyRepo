@@ -6,11 +6,11 @@ import java.nio.ByteBuffer
 /**
  * Created by objectx on 2015/05/24.
  */
-class SourceTextValidatorTest extends Specification {
+class SourceTextScannerTest extends Specification {
     @Unroll ("helper (#a) == #b ?")
     def "Test single line validator" () {
     given:
-        def validator = new SourceTextValidator ()
+        def validator = new SourceTextScanner ()
         def helper = { final String s ->
             def b = s.getBytes 'UTF-8'
             def bb = ByteBuffer.wrap (b).slice ()
@@ -33,7 +33,7 @@ class SourceTextValidatorTest extends Specification {
     @Unroll ('helper (#a) == #b ?')
     def "Test multiline validator" () {
     given:
-        def validator = new SourceTextValidator ()
+        def validator = new SourceTextScanner ()
         def helper = { final String s ->
             def b = s.getBytes 'UTF-8'
             validator.validate (ByteBuffer.wrap (b))
@@ -58,7 +58,7 @@ ghi\r
     @Unroll ('helper (#a) == #b')
     def "Test line normalizer" () {
     given:
-        def validator = new SourceTextValidator ()
+        def validator = new SourceTextScanner ()
         def helper = { final String s ->
             def b = s.getBytes 'UTF-8'
             ByteArrayOutputStream o = new ByteArrayOutputStream ()
@@ -80,7 +80,7 @@ ghi\r
     @Unroll ('helper (#a) == #b')
     def "Test normalizer" () {
     given:
-        def validator = new SourceTextValidator ()
+        def validator = new SourceTextScanner ()
         def helper = { final String s ->
             def sb = s.getBytes ('UTF-8')
             ByteArrayOutputStream o = new ByteArrayOutputStream ()

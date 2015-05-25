@@ -11,7 +11,7 @@ import java.nio.file.Path
 @Slf4j
 @Immutable
 @CompileStatic
-class SourceTextValidator {
+class SourceTextScanner {
     final boolean validate (Path path) {
         false
     }
