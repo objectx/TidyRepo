@@ -6,6 +6,8 @@ import org.slf4j.LoggerFactory
 
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 
 import static java.nio.file.Files.exists
 
@@ -68,8 +70,39 @@ def eachRepositoryFiles (String path, Closure<Path> closure) {
     eachRepositoryFiles (Paths.get (path), closure)
 }
 
-eachRepositoryFiles ('.') { Path p ->
-    println p.fileName
+def scanner = new SourceTextScanner (dryrun: options.'dry-run')
+
+@Field Pattern rxSource = Pattern.compile (/.+\.(?:h|hh|hpp|hxx|h\+\+|c|cc|cpp|cxx|c\+\+|py|pl|java|groovy)$/)
+
+@CompileStatic
+boolean isTarget (Path path) {
+    Matcher m = rxSource.matcher path.fileName.toString ()
+    m.matches ()
+}
+
+try {
+    def repos = options.arguments ()
+    if (! repos) {
+        eachRepositoryFiles ('.') { Path p ->
+            if (isTarget (p)) {
+                scanner.normalize p
+            }
+        }
+    }
+    else {
+        for (def r in repos) {
+            rootLogger.info "Processing repository: {}", r
+            eachRepositoryFiles (r) { Path p ->
+                if (isTarget (p)) {
+                    scanner.normalize p
+                }
+            }
+        }
+    }
+}
+catch (Exception e) {
+    rootLogger.error "Something wrong happen! ({})", e.message
+    System.exit 1
 }
 
 System.exit 0
