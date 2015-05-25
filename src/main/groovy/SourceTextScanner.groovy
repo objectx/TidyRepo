@@ -3,7 +3,10 @@ import groovy.transform.Immutable
 import groovy.util.logging.Slf4j
 
 import java.nio.ByteBuffer
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 
 /**
  * Created by objectx on 2015/05/24.
@@ -12,6 +15,7 @@ import java.nio.file.Path
 @Immutable
 @CompileStatic
 class SourceTextScanner {
+    boolean dryrun = false
     final boolean validate (Path path) {
         false
     }
@@ -65,7 +69,27 @@ class SourceTextScanner {
     }
 
     final boolean normalize (final Path path) {
-        false
+        UUID uuid = UUID.randomUUID ()
+        Path tmp
+
+        if (path.parent) {
+            tmp = path.parent.resolve "tidy-${uuid}.tmp"
+        }
+        else {
+            tmp = Paths.get "tidy-${uuid}.tmp"
+        }
+        final byte [] contents = Files.readAllBytes path
+        ByteArrayOutputStream output = new ByteArrayOutputStream ()
+        if (normalize (output, contents)) {
+            log.info "Conversion required ({}: {} -> {} bytes)", path.toString (), contents.size (), output.size ()
+            if (! dryrun) {
+                log.info "Write to: {}", tmp.toString ()
+                tmp.withOutputStream { OutputStream o ->
+                    output.writeTo o
+                }
+                Files.move tmp, path, StandardCopyOption.REPLACE_EXISTING
+            }
+        }
     }
 
     final boolean normalize (final OutputStream output, final byte [] input) {
@@ -84,7 +108,7 @@ class SourceTextScanner {
                 ++cntConversion
             }
         }
-        cntConversion == 0
+        cntConversion != 0
     }
 
     final boolean normalizeLine (final OutputStream output, final byte [] input, final int start, final int end) {
@@ -137,7 +161,7 @@ class SourceTextScanner {
                 output.write ch
             }
         }
-        return (cntConversion == 0)
+        return cntConversion != 0
     }
 
     final int nextTabStop (int col, int tabWidth) {
