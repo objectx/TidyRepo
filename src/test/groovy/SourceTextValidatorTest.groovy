@@ -34,7 +34,7 @@ class SourceTextValidatorTest extends Specification {
     def "Test multiline validator" () {
     given:
         def validator = new SourceTextValidator ()
-        def helper = { final String s->
+        def helper = { final String s ->
             def b = s.getBytes 'UTF-8'
             validator.validate (ByteBuffer.wrap (b))
         }
@@ -53,5 +53,54 @@ ghi\r
 \tdef'''
         ]
         b << [true, false, false]
+    }
+
+    @Unroll ('helper (#a) == #b')
+    def "Test line normalizer" () {
+    given:
+        def validator = new SourceTextValidator ()
+        def helper = { final String s ->
+            def b = s.getBytes 'UTF-8'
+            ByteArrayOutputStream o = new ByteArrayOutputStream ()
+            validator.normalizeLine (o, b, 0, b.size ())
+            o.toString ()
+        }
+    expect:
+        helper (a) == b
+    where:
+        a || b
+        '' || ''
+        '\r\n'|| '\n'
+        '\t'||'        '
+        ' \t'||'        '
+        '  \tabc\td\r'||'        abc\td\r'
+        ' \t \t abc\r\n'||'                 abc\n'
+    }
+
+    @Unroll ('helper (#a) == #b')
+    def "Test normalizer" () {
+    given:
+        def validator = new SourceTextValidator ()
+        def helper = { final String s ->
+            def sb = s.getBytes ('UTF-8')
+            ByteArrayOutputStream o = new ByteArrayOutputStream ()
+            validator.normalize o, sb
+            o.toString ()
+        }
+    expect:
+        helper (a) == b
+    where:
+        a << [ '''abc\r
+def'''
+             , '''\tabc\t\r
+def
+ghi\r'''
+        ]
+        b << [ '''abc
+def'''
+             , '''        abc\t
+def
+ghi\r'''
+        ]
     }
 }
