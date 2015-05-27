@@ -11,7 +11,6 @@ import java.util.regex.Pattern
 
 import static java.nio.file.Files.exists
 
-
 def build_option_parser () {
     def scriptname = (new File (getClass().protectionDomain.codeSource.location.file)).name
     def cli = new CliBuilder (usage: "${scriptname} [options] [<repository>...]", stopAtNonOption: false)
@@ -44,7 +43,7 @@ if (options.'verbose') {
 }
 
 @CompileStatic
-def eachRepositoryFiles (Path repo, Closure<Path> closure) {
+void eachRepositoryFiles (Path repo, Closure closure) {
     Process files
 
     if (exists (repo.resolve ('.hg'))) {
@@ -67,8 +66,23 @@ def eachRepositoryFiles (Path repo, Closure<Path> closure) {
 }
 
 @CompileStatic
-def eachRepositoryFiles (String path, Closure<Path> closure) {
+void eachRepositoryFiles (String path, Closure closure) {
     eachRepositoryFiles (Paths.get (path), closure)
+}
+
+@CompileStatic
+void eachRepositoryFiles (Path repo, Closure predicate, Closure closure) {
+    eachRepositoryFiles (repo) { Path path ->
+        if (predicate (path)) {
+            closure.delegate = path
+            closure path
+        }
+    }
+}
+
+@CompileStatic
+void eachRepositoryFiles (String repo, Closure predicate, Closure closure) {
+    eachRepositoryFiles Paths.get (repo), predicate, closure
 }
 
 def scanner = new SourceTextScanner (dryrun: options.'dry-run', expandAllTabs: options.'expand-all-tabs')
@@ -84,20 +98,12 @@ boolean isTarget (Path path) {
 try {
     def repos = options.arguments ()
     if (! repos) {
-        eachRepositoryFiles ('.') { Path p ->
-            if (isTarget (p)) {
-                scanner.normalize p
-            }
-        }
+        repos = ['.']
     }
-    else {
-        for (def r in repos) {
-            rootLogger.info "Processing repository: {}", r
-            eachRepositoryFiles (r) { Path p ->
-                if (isTarget (p)) {
-                    scanner.normalize p
-                }
-            }
+    for (def r in repos) {
+        rootLogger.info "Processing repository: {}", r
+        eachRepositoryFiles (r, this.&isTarget) { Path p ->
+            scanner.normalize p
         }
     }
 }
