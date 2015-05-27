@@ -16,6 +16,9 @@ import java.nio.file.StandardCopyOption
 @CompileStatic
 class SourceTextScanner {
     boolean dryrun = false
+    boolean expandAllTabs = false
+    int tabStop = 8
+
     final boolean validate (Path path) {
         false
     }
@@ -79,20 +82,30 @@ class SourceTextScanner {
             tmp = Paths.get "tidy-${uuid}.tmp"
         }
         final byte [] contents = Files.readAllBytes path
-        ByteArrayOutputStream output = new ByteArrayOutputStream ()
-        if (normalize (output, contents)) {
-            log.info "Conversion required ({}: {} -> {} bytes)", path.toString (), contents.size (), output.size ()
-            if (! dryrun) {
-                log.info "Write to: {}", tmp.toString ()
-                tmp.withOutputStream { OutputStream o ->
-                    output.writeTo o
+
+        def normalizer = { ByteArrayOutputStream out, final byte [] bytes ->
+            if (expandAllTabs) {
+                normalizeAll (out, bytes)
+            }
+            else {
+                normalizeFirstIndent (out, bytes)
+            }
+        }
+        new ByteArrayOutputStream ().withStream { ByteArrayOutputStream output ->
+            if (normalizer (output, contents)) {
+                log.info "{} ({} -> {} bytes)", path.toString (), contents.size (), output.size ()
+                if (! dryrun) {
+                    log.debug "Write to: {}", tmp.toString ()
+                    tmp.withOutputStream { OutputStream o ->
+                        output.writeTo o
+                    }
+                    Files.move tmp, path, StandardCopyOption.REPLACE_EXISTING
                 }
-                Files.move tmp, path, StandardCopyOption.REPLACE_EXISTING
             }
         }
     }
 
-    final boolean normalize (final OutputStream output, final byte [] input) {
+    final boolean normalizeFirstIndent (final OutputStream output, final byte [] input) {
         int start = 0
         int cntConversion = 0
         input.eachWithIndex{ byte ch, int i ->
@@ -111,6 +124,57 @@ class SourceTextScanner {
         cntConversion != 0
     }
 
+    boolean normalizeAll (OutputStream output, final byte[] input) {
+        int end = input.size ()
+        int pos = 0
+        int col = 0
+        int cntConversion = 0
+
+        while (pos < end) {
+            int ch = input [pos]
+            ++pos
+
+            if (ch == 0x09) {
+                int next = nextTabStop col, tabStop
+                while (col < next) {
+                    output.write 0x20
+                    ++col
+                }
+                ++cntConversion
+            }
+            else if (ch == 0x0D) {
+                if (pos < end) {
+                    int ch2 = input [pos]
+                    ++pos
+                    if (ch2 == 0x0A) {
+                        output.write 0x0A
+                        ++cntConversion
+                        col = 0
+                    }
+                    else {
+                        output.write ch
+                        output.write ch2
+                        col += 2
+                    }
+                }
+                else {
+                    // Already reached to the end...
+                    output.write ch
+                    ++col
+                }
+            }
+            else if (ch == 0x0A) {
+                output.write 0x0A
+                col = 0
+            }
+            else {
+                output.write ch
+                ++col
+            }
+        }
+        cntConversion != 0
+    }
+
     final boolean normalizeLine (final OutputStream output, final byte [] input, final int start, final int end) {
         int cntConversion = 0
         int pos = 0
@@ -121,7 +185,7 @@ class SourceTextScanner {
             ++pos
 
             if (ch == 0x09) {
-                int next = nextTabStop (col, 8)
+                int next = nextTabStop (col, tabStop)
                 while (col < next) {
                     output.write 0x20
                     ++col
@@ -164,7 +228,7 @@ class SourceTextScanner {
         return cntConversion != 0
     }
 
-    final int nextTabStop (int col, int tabWidth) {
+    static final int nextTabStop (int col, int tabWidth) {
         Math.floorDiv (col + tabWidth, tabWidth) * tabWidth
     }
 }

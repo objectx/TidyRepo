@@ -84,7 +84,7 @@ ghi\r
         def helper = { final String s ->
             def sb = s.getBytes ('UTF-8')
             ByteArrayOutputStream o = new ByteArrayOutputStream ()
-            validator.normalize o, sb
+            validator.normalizeFirstIndent o, sb
             o.toString ()
         }
     expect:
@@ -99,6 +99,32 @@ ghi\r'''
         b << [ '''abc
 def'''
              , '''        abc\t
+def
+ghi\r'''
+        ]
+    }
+    @Unroll ('helper (#a) == #b')
+    def "Test normalizeAll" () {
+    given:
+        def validator = new SourceTextScanner ()
+        def helper = { final String s ->
+            def sb = s.getBytes ('UTF-8')
+            ByteArrayOutputStream o = new ByteArrayOutputStream ()
+            validator.normalizeAll o, sb
+            o.toString ()
+        }
+    expect:
+        helper (a) == b
+    where:
+        a << [ '''abc\r
+def'''
+               , '''\tabc\t?\r
+def
+ghi\r'''
+        ]
+        b << [ '''abc
+def'''
+               , '''        abc     ?
 def
 ghi\r'''
         ]
