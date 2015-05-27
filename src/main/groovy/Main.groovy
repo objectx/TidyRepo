@@ -19,6 +19,7 @@ def build_option_parser () {
         H (longOpt: 'help', "Show this.")
         v (longOpt: 'verbose', "Be verbose.")
         N (longOpt: 'dry-run', "Don't modify anything.")
+        A (longOpt: 'expand-all-tabs', "Expand all tabs.")
     }
     cli
 }
@@ -70,7 +71,7 @@ def eachRepositoryFiles (String path, Closure<Path> closure) {
     eachRepositoryFiles (Paths.get (path), closure)
 }
 
-def scanner = new SourceTextScanner (dryrun: options.'dry-run')
+def scanner = new SourceTextScanner (dryrun: options.'dry-run', expandAllTabs: options.'expand-all-tabs')
 
 @Field Pattern rxSource = Pattern.compile (/.+\.(?:h|hh|hpp|hxx|h\+\+|c|cc|cpp|cxx|c\+\+|py|pl|java|groovy)$/)
 
