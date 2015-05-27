@@ -44,6 +44,7 @@ class SourceTextScanner {
 
     /**
      * Checks INPUT [start..start + position () - 1]
+     *
      * @param input
      * @return true if valid, otherwise return false
      */
@@ -71,6 +72,12 @@ class SourceTextScanner {
         true
     }
 
+    /**
+     * Normalize supplied PATH file
+     *
+     * @param path File to normalize
+     * @return true when normalization occur
+     */
     final boolean normalize (final Path path) {
         UUID uuid = UUID.randomUUID ()
         Path tmp
@@ -105,25 +112,14 @@ class SourceTextScanner {
         }
     }
 
-    final boolean normalizeFirstIndent (final OutputStream output, final byte [] input) {
-        int start = 0
-        int cntConversion = 0
-        input.eachWithIndex{ byte ch, int i ->
-            if (ch == (byte)0x0A) {
-                if (normalizeLine (output, input, start, i + 1)) {
-                    ++cntConversion
-                }
-                start = i + 1
-            }
-        }
-        if (start < input.size ()) {
-            if (normalizeLine (output, input, start, input.size ())) {
-                ++cntConversion
-            }
-        }
-        cntConversion != 0
-    }
-
+    /**
+     * Normalize INPUT
+     *
+     * Expands all TABs in INPUT
+     * @param output
+     * @param input
+     * @return true when normalization occur
+     */
     boolean normalizeAll (OutputStream output, final byte[] input) {
         int end = input.size ()
         int pos = 0
@@ -175,6 +171,42 @@ class SourceTextScanner {
         cntConversion != 0
     }
 
+    /**
+     * Normalize INPUT
+     *
+     * Only expand TABs in 1st level of indent
+     * @param output
+     * @param input
+     * @return true when normalization occur
+     */
+    final boolean normalizeFirstIndent (final OutputStream output, final byte [] input) {
+        int start = 0
+        int cntConversion = 0
+        input.eachWithIndex{ byte ch, int i ->
+            if (ch == (byte)0x0A) {
+                if (normalizeLine (output, input, start, i + 1)) {
+                    ++cntConversion
+                }
+                start = i + 1
+            }
+        }
+        if (start < input.size ()) {
+            if (normalizeLine (output, input, start, input.size ())) {
+                ++cntConversion
+            }
+        }
+        cntConversion != 0
+    }
+
+    /**
+     * Normalize INPUT [START..<END]
+     *
+     * @param output
+     * @param input
+     * @param start
+     * @param end
+     * @return true when normalization occur
+     */
     final boolean normalizeLine (final OutputStream output, final byte [] input, final int start, final int end) {
         int cntConversion = 0
         int pos = 0
@@ -228,8 +260,13 @@ class SourceTextScanner {
         return cntConversion != 0
     }
 
+    /**
+     * Compute next tab-stop position
+     * @param col
+     * @param tabWidth
+     * @return Next tab stop column
+     */
     static final int nextTabStop (int col, int tabWidth) {
         Math.floorDiv (col + tabWidth, tabWidth) * tabWidth
     }
 }
-
