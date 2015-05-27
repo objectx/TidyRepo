@@ -8,9 +8,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 
-/**
- * Created by objectx on 2015/05/24.
- */
 @Slf4j
 @Immutable
 @CompileStatic
@@ -182,7 +179,7 @@ class SourceTextScanner {
     final boolean normalizeFirstIndent (final OutputStream output, final byte [] input) {
         int start = 0
         int cntConversion = 0
-        input.eachWithIndex{ byte ch, int i ->
+        input.eachWithIndex { byte ch, int i ->
             if (ch == (byte)0x0A) {
                 if (normalizeLine (output, input, start, i + 1)) {
                     ++cntConversion
