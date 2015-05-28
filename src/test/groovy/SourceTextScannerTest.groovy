@@ -83,9 +83,7 @@ ghi\r
         def validator = new SourceTextScanner ()
         def helper = { final String s ->
             def sb = s.getBytes ('UTF-8')
-            validator.normalizeFirstIndent (sb) { o, changed ->
-                o.toString ()
-            }
+            validator.normalizeFirstIndent (sb) { it.toString () }
         }
     expect:
         helper (a) == b
@@ -103,18 +101,20 @@ def
 ghi\r'''
         ]
     }
-    @Unroll ('helper (#a) == #b')
+    @Unroll ('helper (#a) == [#b, true]')
     def "Test normalizeAll" () {
     given:
         def validator = new SourceTextScanner ()
         def helper = { final String s ->
             def sb = s.getBytes ('UTF-8')
             validator.normalizeAll (sb) { o, changed ->
-                o.toString ()
+                [o.toString (), changed]
             }
         }
     expect:
-        helper (a) == b
+        def result = helper (a)
+        result [0] == b
+        result [1]
     where:
         a << [ '''abc\r
 def'''

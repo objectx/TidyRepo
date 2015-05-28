@@ -1,6 +1,7 @@
 import groovy.transform.CompileStatic
 import groovy.transform.Immutable
 import groovy.transform.stc.ClosureParams
+import groovy.transform.stc.FromString
 import groovy.transform.stc.SimpleType
 import groovy.util.logging.Slf4j
 
@@ -81,15 +82,17 @@ class SourceTextScanner {
 
         byte [] contents = Files.readAllBytes path
         def normalizer = expandAllTabs ? this.&normalizeAll : this.&normalizeFirstIndent
-        normalizer (contents) { ByteArrayOutputStream output ->
-            Path tmp = createUniquePath (path)
-            log.info "{} ({} -> {} bytes)", path.toString (), contents.size (), output.size ()
-            if (! dryrun) {
-                log.debug "Write to: {}", tmp.toString ()
-                tmp.withOutputStream { OutputStream o ->
-                    output.writeTo o
+        normalizer (contents) { ByteArrayOutputStream output, boolean changed ->
+            if (changed) {
+                Path tmp = createUniquePath (path)
+                log.info "{} ({} -> {} bytes)", path.toString (), contents.size (), output.size ()
+                if (! dryrun) {
+                    log.debug "Write to: {}", tmp.toString ()
+                    tmp.withOutputStream { OutputStream o ->
+                        output.writeTo o
+                    }
+                    Files.move tmp, path, StandardCopyOption.REPLACE_EXISTING
                 }
-                Files.move tmp, path, StandardCopyOption.REPLACE_EXISTING
             }
         }
     }
@@ -112,8 +115,10 @@ class SourceTextScanner {
      * @param input
      * @return true when normalization occur
      */
-    final <T> T normalizeAll (final byte[] input,
-                              @ClosureParams (value=SimpleType, options=['java.io.ByteArrayOutputStream', 'boolean']) Closure<T> closure) {
+    final <T> T normalizeAll ( final byte[] input
+                             , @ClosureParams ( value = FromString
+                                              , options=[ 'java.io.ByteArrayOutputStream'
+                                                        , 'java.io.ByteArrayOutputStream,boolean']) Closure<T> closure) {
         int end = input.size ()
         int pos = 0
         int col = 0
@@ -165,7 +170,7 @@ class SourceTextScanner {
                 }
             }
             closure.delegate = output
-            return closure (output, (0 < cntConversion))
+            return callClosure (closure, output, (0 < cntConversion))
         }
         finally {
             output.close ()
@@ -180,7 +185,10 @@ class SourceTextScanner {
      * @param input
      * @return true when normalization occur
      */
-    final <T> T normalizeFirstIndent (final byte [] input, @ClosureParams (value=SimpleType, options=['boolean', 'java.io.ByteArrayOutputStream']) Closure closure) {
+    final <T> T normalizeFirstIndent ( final byte [] input
+                                     , @ClosureParams ( value = FromString
+                                                      , options = [ 'java.io.ByteArrayOutputStream'
+                                                                  , 'java.io.ByteArrayOutputStream,boolean']) Closure<T> closure) {
         int start = 0
         int cntConversion = 0
         ByteArrayOutputStream output = new ByteArrayOutputStream ()
@@ -200,7 +208,7 @@ class SourceTextScanner {
                 }
             }
             closure.delegate = output
-            return closure (output, (0 < cntConversion))
+            return callClosure (closure, output, (0 < cntConversion))
         }
         finally {
             output.close ()
@@ -269,6 +277,12 @@ class SourceTextScanner {
         return cntConversion != 0
     }
 
+    final static <T> T callClosure (Closure<T> closure, ByteArrayOutputStream output, boolean changed) {
+        if (closure.getMaximumNumberOfParameters () == 2) {
+            return closure.call (output, changed)
+        }
+        return closure.call (output)
+    }
     /**
      * Compute next tab-stop position
      * @param col
