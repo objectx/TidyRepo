@@ -83,9 +83,9 @@ ghi\r
         def validator = new SourceTextScanner ()
         def helper = { final String s ->
             def sb = s.getBytes ('UTF-8')
-            ByteArrayOutputStream o = new ByteArrayOutputStream ()
-            validator.normalizeFirstIndent o, sb
-            o.toString ()
+            validator.normalizeFirstIndent (sb) { o, changed ->
+                o.toString ()
+            }
         }
     expect:
         helper (a) == b
@@ -109,9 +109,9 @@ ghi\r'''
         def validator = new SourceTextScanner ()
         def helper = { final String s ->
             def sb = s.getBytes ('UTF-8')
-            ByteArrayOutputStream o = new ByteArrayOutputStream ()
-            validator.normalizeAll o, sb
-            o.toString ()
+            validator.normalizeAll (sb) { o, changed ->
+                o.toString ()
+            }
         }
     expect:
         helper (a) == b

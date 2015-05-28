@@ -1,5 +1,7 @@
 import groovy.transform.CompileStatic
 import groovy.transform.Immutable
+import groovy.transform.stc.ClosureParams
+import groovy.transform.stc.SimpleType
 import groovy.util.logging.Slf4j
 
 import java.nio.ByteBuffer
@@ -76,31 +78,19 @@ class SourceTextScanner {
      * @return true when normalization occur
      */
     final boolean normalize (final Path path) {
-        Path tmp = createUniquePath (path)
-        final byte [] contents = Files.readAllBytes path
 
-        Closure normalizer = getNormalizer ()
-
-        new ByteArrayOutputStream ().withStream { ByteArrayOutputStream output ->
-            if (normalizer (output, contents)) {
-                log.info "{} ({} -> {} bytes)", path.toString (), contents.size (), output.size ()
-                if (! dryrun) {
-                    log.debug "Write to: {}", tmp.toString ()
-                    tmp.withOutputStream { OutputStream o ->
-                        output.writeTo o
-                    }
-                    Files.move tmp, path, StandardCopyOption.REPLACE_EXISTING
+        byte [] contents = Files.readAllBytes path
+        def normalizer = expandAllTabs ? this.&normalizeAll : this.&normalizeFirstIndent
+        normalizer (contents) { ByteArrayOutputStream output ->
+            Path tmp = createUniquePath (path)
+            log.info "{} ({} -> {} bytes)", path.toString (), contents.size (), output.size ()
+            if (! dryrun) {
+                log.debug "Write to: {}", tmp.toString ()
+                tmp.withOutputStream { OutputStream o ->
+                    output.writeTo o
                 }
+                Files.move tmp, path, StandardCopyOption.REPLACE_EXISTING
             }
-        }
-    }
-
-    final Closure getNormalizer () {
-        if (expandAllTabs) {
-            this.&normalizeAll
-        }
-        else {
-            this.&normalizeFirstIndent
         }
     }
 
@@ -119,59 +109,67 @@ class SourceTextScanner {
      * Normalize INPUT
      *
      * Expands all TABs in INPUT
-     * @param output
      * @param input
      * @return true when normalization occur
      */
-    boolean normalizeAll (OutputStream output, final byte[] input) {
+    final <T> T normalizeAll (final byte[] input,
+                              @ClosureParams (value=SimpleType, options=['java.io.ByteArrayOutputStream', 'boolean']) Closure<T> closure) {
         int end = input.size ()
         int pos = 0
         int col = 0
         int cntConversion = 0
 
-        while (pos < end) {
-            int ch = input [pos]
-            ++pos
+        ByteArrayOutputStream output = new ByteArrayOutputStream ()
 
-            if (ch == 0x09) {
-                int next = nextTabStop col, tabStop
-                while (col < next) {
-                    output.write 0x20
-                    ++col
+        try {
+            while (pos < end) {
+                int ch = input [pos]
+                ++pos
+
+                if (ch == 0x09) {
+                    int next = nextTabStop col, tabStop
+                    while (col < next) {
+                        output.write 0x20
+                        ++col
+                    }
+                    ++cntConversion
                 }
-                ++cntConversion
-            }
-            else if (ch == 0x0D) {
-                if (pos < end) {
-                    int ch2 = input [pos]
-                    ++pos
-                    if (ch2 == 0x0A) {
-                        output.write 0x0A
-                        ++cntConversion
-                        col = 0
+                else if (ch == 0x0D) {
+                    if (pos < end) {
+                        int ch2 = input [pos]
+                        ++pos
+                        if (ch2 == 0x0A) {
+                            output.write 0x0A
+                            ++cntConversion
+                            col = 0
+                        }
+                        else {
+                            output.write ch
+                            output.write ch2
+                            col += 2
+                        }
                     }
                     else {
+                        // Already reached to the end...
                         output.write ch
-                        output.write ch2
-                        col += 2
+                        ++col
                     }
                 }
+                else if (ch == 0x0A) {
+                    output.write 0x0A
+                    col = 0
+                }
                 else {
-                    // Already reached to the end...
                     output.write ch
                     ++col
                 }
             }
-            else if (ch == 0x0A) {
-                output.write 0x0A
-                col = 0
-            }
-            else {
-                output.write ch
-                ++col
-            }
+            closure.delegate = output
+            return closure (output, (0 < cntConversion))
         }
-        cntConversion != 0
+        finally {
+            output.close ()
+        }
     }
 
     /**
@@ -182,23 +180,31 @@ class SourceTextScanner {
      * @param input
      * @return true when normalization occur
      */
-    final boolean normalizeFirstIndent (final OutputStream output, final byte [] input) {
+    final <T> T normalizeFirstIndent (final byte [] input, @ClosureParams (value=SimpleType, options=['boolean', 'java.io.ByteArrayOutputStream']) Closure closure) {
         int start = 0
         int cntConversion = 0
-        input.eachWithIndex { byte ch, int i ->
-            if (ch == (byte)0x0A) {
-                if (normalizeLine (output, input, start, i + 1)) {
+        ByteArrayOutputStream output = new ByteArrayOutputStream ()
+
+        try {
+            input.eachWithIndex { byte ch, int i ->
+                if (ch == (byte)0x0A) {
+                    if (normalizeLine (output, input, start, i + 1)) {
+                        ++cntConversion
+                    }
+                    start = i + 1
+                }
+            }
+            if (start < input.size ()) {
+                if (normalizeLine (output, input, start, input.size ())) {
                     ++cntConversion
                 }
-                start = i + 1
             }
+            closure.delegate = output
+            return closure (output, (0 < cntConversion))
         }
-        if (start < input.size ()) {
-            if (normalizeLine (output, input, start, input.size ())) {
-                ++cntConversion
-            }
+        finally {
+            output.close ()
         }
-        cntConversion != 0
     }
 
     /**
