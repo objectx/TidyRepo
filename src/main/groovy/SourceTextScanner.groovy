@@ -76,25 +76,11 @@ class SourceTextScanner {
      * @return true when normalization occur
      */
     final boolean normalize (final Path path) {
-        UUID uuid = UUID.randomUUID ()
-        Path tmp
-
-        if (path.parent) {
-            tmp = path.parent.resolve "tidy-${uuid}.tmp"
-        }
-        else {
-            tmp = Paths.get "tidy-${uuid}.tmp"
-        }
+        Path tmp = createUniquePath (path)
         final byte [] contents = Files.readAllBytes path
 
-        def normalizer = { ByteArrayOutputStream out, final byte [] bytes ->
-            if (expandAllTabs) {
-                normalizeAll (out, bytes)
-            }
-            else {
-                normalizeFirstIndent (out, bytes)
-            }
-        }
+        Closure normalizer = getNormalizer ()
+
         new ByteArrayOutputStream ().withStream { ByteArrayOutputStream output ->
             if (normalizer (output, contents)) {
                 log.info "{} ({} -> {} bytes)", path.toString (), contents.size (), output.size ()
@@ -106,6 +92,26 @@ class SourceTextScanner {
                     Files.move tmp, path, StandardCopyOption.REPLACE_EXISTING
                 }
             }
+        }
+    }
+
+    final Closure getNormalizer () {
+        if (expandAllTabs) {
+            this.&normalizeAll
+        }
+        else {
+            this.&normalizeFirstIndent
+        }
+    }
+
+    final Path createUniquePath (Path path) {
+        UUID uuid = UUID.randomUUID ()
+
+        if (path.parent) {
+            path.parent.resolve "tidy-${uuid}.tmp"
+        }
+        else {
+            Paths.get "tidy-${uuid}.tmp"
         }
     }
 
