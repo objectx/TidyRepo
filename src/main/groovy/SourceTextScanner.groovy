@@ -2,7 +2,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.Immutable
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.FromString
-import groovy.transform.stc.SimpleType
 import groovy.util.logging.Slf4j
 
 import java.nio.ByteBuffer
