@@ -19,6 +19,7 @@ def build_option_parser () {
         v (longOpt: 'verbose', "Be verbose.")
         N (longOpt: 'dry-run', "Don't modify anything.")
         A (longOpt: 'expand-all-tabs', "Expand all tabs.")
+        _ (longOpt: 'parallel', "Do parallel conversion", optionalArg: true, args: 1, argName: 'threads')
     }
     cli
 }
@@ -42,7 +43,13 @@ if (options.'verbose') {
     rootLogger.level = Level.INFO
 }
 
-@CompileStatic
+@Field cntThreads = 0
+
+if (options.'parallel') {
+    cntThreads = Integer.parseInt (options.'parallel')
+}
+
+
 void eachRepositoryFiles (Path repo, Closure closure) {
     Process files
 
@@ -58,10 +65,23 @@ void eachRepositoryFiles (Path repo, Closure closure) {
         throw new IOException ("${repo} is neither git nor mercurial repository.")
     }
 
-    files.in.eachLine { String l ->
-        Path target = repo.resolve l
-        closure.delegate = target
-        closure target
+    if (0 < cntThreads) {
+        rootLogger.info "Processing with {} threads", cntThreads
+        String [] lines = files.in.readLines ().toArray ()
+        groovyx.gpars.GParsPool.withPool (cntThreads) {
+            lines.eachParallel { String l ->
+                Path target = repo.resolve l
+                closure.delegate = target
+                closure target
+            }
+        }
+    }
+    else {
+        files.in.eachLine { String l ->
+            Path target = repo.resolve l
+            closure.delegate = target
+            closure target
+        }
     }
 }
 
