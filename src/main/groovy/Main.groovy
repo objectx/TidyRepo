@@ -100,9 +100,8 @@ final class Main {
 
         if (1 < cntThread) {
             rootLogger.info "Processing with {} threads", this.cntThread
-            String [] lines = files.in.readLines ().toArray ()
             groovyx.gpars.GParsPool.withPool (this.cntThread) {
-                lines.eachParallel { String l ->
+                files.in.readLines ().toArray ().eachParallel { String l ->
                     Path target = repo.resolve l
                     predicate.delegate = target
                     if (predicate (target)) {
