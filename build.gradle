@@ -1,5 +1,11 @@
+plugins {
+    id 'groovy'
+    id "com.github.johnrengelman.shadow" version "1.2.1"
+}
+
 apply plugin: "groovy"
 apply plugin: "application"
+apply plugin: "com.github.johnrengelman.shadow"
 
 mainClassName = 'Main'
 
@@ -27,19 +33,6 @@ dependencies {
 
 tasks.withType (GroovyCompile) {
     groovyOptions.optimizationOptions.indy = true
-}
-
-task uberjar (type: Jar, dependsOn: [':assemble']) {
-    classifier = 'deploy'
-    from files (sourceSets.main.output.classesDir)
-    from files (sourceSets.main.output.resourcesDir)
-    from configurations.runtime.asFileTree.files.collect { zipTree (it) }
-
-    entryCompression = ZipEntryCompression.DEFLATED
-    zip64 = true
-    manifest {
-        attributes 'Main-Class': 'Main'
-    }
 }
 
 task go (type: JavaExec, dependsOn: [':classes']) {
